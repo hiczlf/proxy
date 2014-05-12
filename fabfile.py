@@ -1,66 +1,49 @@
-from fabric.contrib.files import append, exists, sed
-from fabric.api import env, local, run
-import random
+from fabric.contrib.files import exists
+from fabric.api import env, local, run, warn_only
 
 REPO_URL = 'https://github.com/lifenglifeng001/proxy.git'
 
+env.hosts = [
+        '106.186.23.144',
+        '198.58.111.202',
+        '66.228.35.131',
+        '106.186.112.187',
+        '192.81.131.122',
+        '173.255.195.118',
+        '64.20.37.156',
+        '173.214.169.12',
+        ]
+env.password = 'sm2906'
+env.user = 'root'
+
 
 def deploy():
-    proxy_folder = '/home/%s/proxy' % (env.user)
-    source_folder = site_folder + '/source'
-    _create_directory_structure_if_necessary(site_folder)
-    _get_latest_source(source_folder)
-    _update_settings(source_folder, env.host)
-    _update_virtualenv(source_folder)
-    _update_static_files(source_folder)
-    _update_database(source_folder)
+    proxy_folder = '/root/proxy'
+    _install_requirements()
+    _create_directory_structure_if_necessary(proxy_folder)
+    _get_latest_source(proxy_folder)
+    _run_proxy()
 
 
-def _create_directory_structure_if_necessary(site_folder):
-    run('mkdir -p %s/%s' % (site_folder, subfolder))
+def _install_requirements():
+    run('sudo apt-get -y --no-upgrade install python-twisted')
+    run('sudo apt-get -y --no-upgrade install git')
+    with warn_only():
+        run("kill `ps -ef | grep proxy.py | grep -v grep | awk '{print $2}'`")
 
 
-def _get_latest_source(source_folder):
-    if exists(source_folder + '/.git'):
-        run('cd %s && git fetch' % (source_folder))
+def _create_directory_structure_if_necessary(proxy_folder):
+    run('mkdir -p %s' % (proxy_folder,))
+
+
+def _get_latest_source(proxy_folder):
+    if exists(proxy_folder + '/.git'):
+        run('cd %s && git fetch' % (proxy_folder))
     else:
-        run('git clone %s %s' % (REPO_URL, source_folder))
+        run('git clone %s %s' % (REPO_URL, proxy_folder))
     current_commit = local("git log -n 1 --format=%H", capture=True)
-    run('cd %s && git reset --hard %s' % (source_folder, current_commit))
+    run('cd %s && git reset --hard %s' % (proxy_folder, current_commit))
 
 
-def _update_settings(source_folder, site_name):
-    settings_path = source_folder + '/superlists/settings.py'
-    sed(settings_path, "DEBUG = True", "DEBUG = False")
-    sed(settings_path,
-        'ALLOWED_HOSTS =.+$',
-        'ALLOWED_HOSTS = ["%s"]' % (site_name,)
-        )
-    secret_key_file = source_folder + '/superlists/secret_key.py'
-    if not exists(secret_key_file):
-        chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-        key = ''.join(random.SystemRandom().choice(chars) for _ in range(5))
-        append(secret_key_file, "SECRET_KEY = '%s'" % (key,))
-    append(settings_path, '\nfrom .secret_key import SECRET_KEY')
-
-
-def _update_virtualenv(source_folder):
-    virtualenv_folder = source_folder + '/../virtualenv'
-    if not exists(virtualenv_folder + '/bin/pip'):
-        run('virtualenv --python=python3 %s' % (virtualenv_folder,))
-    run('%s/bin/pip install -r %s/requirements.txt' % (
-        virtualenv_folder, source_folder
-        ))
-
-
-def _update_static_files(source_folder):
-    run('cd %s && ../virtualenv/bin/python3 manage.py collectstatic --noinput' % (
-        source_folder,
-        ))
-
-
-def _update_database(source_folder):
-    # 该功能仅支持django1.7
-    run('cd %s && ../virtualenv/bin/python3 manage.py migrate --noinput' % (
-        source_folder,
-        ))
+def _run_proxy():
+    run('python /root/proxy/proxy.py &')

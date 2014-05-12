@@ -11,7 +11,7 @@ def parse_args():
         description=u"This is a proxy implemented by twisted")
 
     help = "The specified IP to listen on"
-    parser.add_argument("--ip", help=help, default="183.13.108.89")
+    parser.add_argument("--ip", help=help, default="219.134.147.100")
 
     help = "The port tot listen on. "
     parser.add_argument("--port", type=int, help=help, default=9999)
@@ -27,6 +27,7 @@ PORT = args.port
 
 class RestrictIPProxyFactory(http.HTTPFactory):
     def buildProtocol(self, addr):
+        print(addr.host)
         if addr.host == IP:
             return proxy.Proxy()
         return None
