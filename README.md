@@ -5,9 +5,11 @@ my proxy
 
 以后可能增加对https的处理。
 
-== 使用方法 ==
+使用方法
+---------------
 
     $python proxy.py --ip 可以访问该代理的ip  --port 端口
 
 或
+
     $ python proxy.py -h
