@@ -20,7 +20,6 @@ def parse_args():
 
 
 args = parse_args()
-IP = args.ip
 PORT = args.port
 
 
