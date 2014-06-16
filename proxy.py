@@ -5,7 +5,7 @@ import argparse
 from twisted.internet import reactor
 from twisted.web import proxy, http
 
-IP_LIST = ['113.108.68.162', '113.89.9.136']
+IP_LIST = ['116.24.29.200', '113.89.9.136']
 
 
 def parse_args():
