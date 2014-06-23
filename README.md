@@ -8,7 +8,7 @@ my proxy
 使用方法
 ---------------
 
-    $python proxy.py --ip 可以访问该代理的ip  --port 端口
+    $python proxy.py   --port 端口
 
 或
 
