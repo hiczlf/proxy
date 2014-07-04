@@ -25,10 +25,11 @@ PORT = args.port
 
 class RestrictIPProxyFactory(http.HTTPFactory):
     def buildProtocol(self, addr):
-        print(addr.host)
-        if addr.host in IP_LIST:
-            return proxy.Proxy()
-        return None
+        """ 允许所有ip"""
+        # print(addr.host)
+        # if addr.host in IP_LIST:
+        return proxy.Proxy()
+        # return None
 
 
 reactor.listenTCP(PORT, RestrictIPProxyFactory())
