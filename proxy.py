@@ -17,7 +17,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     __base = BaseHTTPServer.BaseHTTPRequestHandler
     __base_handle = __base.handle
 
-    server_version = "TinyHTTPProxy/" + __version__
+    server_version = "EasyProxy/" + __version__
     rbufsize = 0                        # self.rfile Be unbuffered
 
     def _connect_to(self, netloc, soc):
