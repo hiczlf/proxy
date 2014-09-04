@@ -1,15 +1,25 @@
 my proxy
 =============
 
-这个代理为本人在写爬虫的过程中所写， 仅仅满足最基本的需求，无法处理https请求.
+基于Tiny HTTP Proxy编写,
 
-以后可能增加对https的处理。
+仅仅增加认证功能, 修复一些问题， 不在此一一列举了。
+
+原版本库地址: https://github.com/tkmunzwa/Tiny-HTTP-Proxy
+
+设置用户名密码， 请修改 BASIC_AUTH_KEY(在proxy.py中)
+
+注意
+-----------
+
+暂时只支持： python2.7
+
 
 使用方法
 ---------------
 
     $python proxy.py   --port 端口
 
-或
+或, 查看帮助:
 
     $ python proxy.py -h
