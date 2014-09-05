@@ -1,23 +1,41 @@
 #! /usr/bin/env python
 # coding=utf-8
 
+from __future__ import unicode_literals
 import argparse
 
-__version__ = "0.2.1"
+__version__ = "0.1"
 
-import BaseHTTPServer, select, socket, SocketServer, urlparse
+import BaseHTTPServer
+import select, socket, SocketServer, urlparse
 from socket import error as SocketError
 import base64
+import logging
+import os
 
-# ############### 代理设置  ######################
-BASIC_AUTH_KEY = base64.b64encode("lf:lf")
+import config
+
+
+def proxy_logger():
+    logger = logging.getLogger(config.PROXY_NAME)
+    logger_level = getattr(logging, config.LOG_LEVEL)
+    logger.setLevel(logger_level)
+    if config.LOG_DIR:
+        log_file_path = os.path.join(config.LOG_DIR, config.LOG_FILE_NAME)
+        handler = logging.FileHandler(log_file_path)
+    else:
+        handler = logging.StreamHandler()
+    logger.addHandler(handler)
+    return logger
+
+proxy_logger = proxy_logger()
 
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     __base = BaseHTTPServer.BaseHTTPRequestHandler
     __base_handle = __base.handle
 
-    server_version = "EasyProxy/" + __version__
+    server_version = config.PROXY_NAME + config.PROXY_VERSION
     rbufsize = 0                        # self.rfile Be unbuffered
 
     def _connect_to(self, netloc, soc):
@@ -26,7 +44,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
             host_port = netloc[:i], int(netloc[i + 1:])
         else:
             host_port = netloc, 80
-        print("\t" "connect to %s:%d" % host_port)
+        self.log_message("connect to %s:%d" % host_port)
         try:
             soc.connect(host_port)
         except socket.error as arg:
@@ -105,6 +123,16 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
             if count == max_idling:
                 break
 
+    def log_message(self, format, *args):
+        """Log an arbitrary message.
+
+        """
+
+        proxy_logger.info("%s - - [%s] %s" %
+                         (self.address_string(),
+                          self.log_date_time_string(),
+                          format % args))
+
     do_HEAD = do_GET
     do_POST = do_GET
     do_PUT = do_GET
@@ -119,7 +147,6 @@ class AuthProxyHandler(ProxyHandler):
     '''
 
     def do_AUTHHEAD(self):
-        print("send header")
         self.send_response(401)
         self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
         self.send_header('Content-type', 'text/html')
@@ -133,10 +160,12 @@ class AuthProxyHandler(ProxyHandler):
 
     def auth_do(self, do):
         ''' 认证方法， 包装各种do_COMMAND方法 '''
-        if not self.headers.getheader('Proxy-Authorization'):
+        proxy_auth_header = self.headers.getheader('Proxy-Authorization')
+        basic_auth_key = base64.b64encode(config.BASIC_AUTH_KEY)
+        if not proxy_auth_header:
             self.do_AUTHHEAD()
             self.wfile.write('no auth header received')
-        elif self.headers.getheader('Proxy-Authorization') == 'Basic ' + BASIC_AUTH_KEY:
+        elif proxy_auth_header + basic_auth_key:
             do(self)
         else:
             self.do_AUTHHEAD()
@@ -154,14 +183,16 @@ def parse_args():
         description=u"一个简单的http代理")
 
     help = u"监听的端口"
-    parser.add_argument("--port", type=int, help=help, default=8000)
+    parser.add_argument("--port", type=int,
+                        help=help, default=config.DEFAULT_PORT)
 
     args = parser.parse_args()
     return args
+
 
 if __name__ == '__main__':
     args = parse_args()
     PORT = args.port
     server = ThreadingHTTPServer(('', PORT), AuthProxyHandler)
-    print(u"HTTP代理开始工作: 监听的端口为: %s" % PORT)
+    proxy_logger.info(u"HTTP代理开始工作: 监听的端口为: %s" % PORT)
     server.serve_forever()

@@ -1,13 +1,9 @@
-my proxy
+PoorProxy
 =============
 
 基于Tiny HTTP Proxy编写,
-
-仅仅增加认证功能, 修复一些问题， 不在此一一列举了。
-
 原版本库地址: https://github.com/tkmunzwa/Tiny-HTTP-Proxy
 
-设置用户名密码， 请修改 BASIC_AUTH_KEY(在proxy.py中)
 
 注意
 -----------
