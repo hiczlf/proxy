@@ -140,10 +140,9 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 class AuthProxyHandler(ProxyHandler):
-    ''' 认证类: 使用basic authentication认证
-        此处验证 Proxy-Authorization 头， 而不是Authorization头
-        使代理验证和网站验证互补干扰。
-        而且 python urllib2 代理验证也发送的是Proxy-Authorization头
+    ''' use basic authentication here
+        The authticatin header is Proxy-Authorization， not Authorization
+        The python urllib2 proxy handler also use Proxy-Authorization header.
     '''
 
     def do_AUTHHEAD(self):
@@ -159,7 +158,7 @@ class AuthProxyHandler(ProxyHandler):
         self.auth_do(ProxyHandler.do_CONNECT)
 
     def auth_do(self, do):
-        ''' 认证方法， 包装各种do_COMMAND方法 '''
+        ''' auth method '''
         proxy_auth_header = self.headers.getheader('Proxy-Authorization')
         basic_auth_key = base64.b64encode(config.BASIC_AUTH_KEY)
         if not proxy_auth_header:
@@ -178,11 +177,11 @@ class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
     pass
 
 def parse_args():
-    """获取命令行参数"""
+    """get command line arguments"""
     parser = argparse.ArgumentParser(
-        description=u"一个简单的http代理")
+        description=u"A simple http proxy")
 
-    help = u"监听的端口"
+    help = u"The port that listening on"
     parser.add_argument("--port", type=int,
                         help=help, default=config.DEFAULT_PORT)
 

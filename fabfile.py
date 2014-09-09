@@ -13,8 +13,6 @@ env.hosts = [
         '64.20.37.156',
         '173.214.169.12',
 ]
-env.user = 'root'
-env.password = 'sm2906'
 
 
 def deploy():
@@ -26,7 +24,6 @@ def deploy():
 
 
 def _install_requirements():
-    run('sudo apt-get -y --no-upgrade install python-twisted')
     run('sudo apt-get -y --no-upgrade install git')
     run('sudo apt-get -y --no-upgrade install dtach')
     with warn_only():
