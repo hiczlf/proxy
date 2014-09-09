@@ -15,7 +15,7 @@ and passwork, not only allow specified ips. So I write this simple proxy.
 And also include some useful script:
 
  * An automatic deploy script 
- * some example that using proxy
+ * some example that using this proxy
 
 Requirements
 ==================
