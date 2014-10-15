@@ -194,6 +194,6 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     PORT = args.port
-    server = ThreadingHTTPServer(('192.168.0.49', PORT), AuthProxyHandler)
+    server = ThreadingHTTPServer(('', PORT), AuthProxyHandler)
     proxy_logger.info(u"HTTP代理开始工作: 监听的端口为: %s" % PORT)
     server.serve_forever()
