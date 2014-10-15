@@ -12,4 +12,4 @@ LOG_DIR = ''
 LOG_FILE_NAME = 'poor_proxy.log'
 
 # security settings
-BASIC_AUTH_KEY = "username:password"
+BASIC_AUTH_KEY = "lf:lf"

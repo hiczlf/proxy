@@ -73,6 +73,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         (scm, netloc, path, params, query, fragment) = urlparse.urlparse(
             self.path, 'http')
+        self.log_message("connect to %s" % netloc)
         if scm != 'http' or fragment or not netloc:
             self.send_error(400, "bad url %s" % self.path)
             return
@@ -160,11 +161,12 @@ class AuthProxyHandler(ProxyHandler):
     def auth_do(self, do):
         ''' auth method '''
         proxy_auth_header = self.headers.getheader('Proxy-Authorization')
+        basic_auth_key_provided = proxy_auth_header.split(' ')[-1]
         basic_auth_key = base64.b64encode(config.BASIC_AUTH_KEY)
         if not proxy_auth_header:
             self.do_AUTHHEAD()
             self.wfile.write('no auth header received')
-        elif proxy_auth_header + basic_auth_key:
+        elif basic_auth_key_provided == basic_auth_key:
             do(self)
         else:
             self.do_AUTHHEAD()
@@ -192,6 +194,6 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     PORT = args.port
-    server = ThreadingHTTPServer(('', PORT), AuthProxyHandler)
+    server = ThreadingHTTPServer(('192.168.0.49', PORT), AuthProxyHandler)
     proxy_logger.info(u"HTTP代理开始工作: 监听的端口为: %s" % PORT)
     server.serve_forever()

@@ -6,8 +6,9 @@ proxy = urllib2.ProxyHandler({
 })
 auth = urllib2.HTTPBasicAuthHandler()
 opener = urllib2.build_opener(proxy, auth, urllib2.HTTPHandler)
+urllib2.install_opener(opener)
 
-# conn = urllib2.urlopen('http://dc.icgoo.net')
-conn = urllib2.urlopen('https://github.com')
+conn = urllib2.urlopen('http://dc.icgoo.net/jiayou/?partno=lm124D&qty=1&supplier=101')
+# conn = urllib2.urlopen('https://github.com')
 return_str = conn.read()
 print(return_str)
