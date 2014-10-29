@@ -2,10 +2,10 @@
 # coding=utf-8
 
 from __future__ import unicode_literals
-import argparse
 
 __version__ = "0.1"
 
+from optparse import OptionParser
 import BaseHTTPServer
 import select, socket, SocketServer, urlparse
 from socket import error as SocketError
@@ -185,20 +185,19 @@ class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
 
 def parse_args():
     """get command line arguments"""
-    parser = argparse.ArgumentParser(
-        description=u"A simple http proxy")
-
+    parser = OptionParser(usage="python proxy.py")
     help = u"The port that listening on"
-    parser.add_argument("--port", type=int,
-                        help=help, default=config.DEFAULT_PORT)
+    parser.add_option("--port", dest='port', type='int',
+                    help=help, default=config.DEFAULT_PORT)
 
-    args = parser.parse_args()
-    return args
+    opts, args = parser.parse_args()
+    return opts
 
 
 if __name__ == '__main__':
     args = parse_args()
     PORT = args.port
+    print(PORT)
     server = ThreadingHTTPServer(('', PORT), AuthProxyHandler)
     proxy_logger.info(u"HTTP proxy strat working, the ported listend is: %s" % PORT)
     server.serve_forever()
