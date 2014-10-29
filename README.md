@@ -1,28 +1,17 @@
 PoorProxy
 =============
 
-This proxy is based on [Tiny HTTP Proxy](https://github.com/tkmunzwa/Tiny-HTTP-Proxy), 
-and has some  improvement.
+基于[Tiny HTTP Proxy](https://github.com/tkmunzwa/Tiny-HTTP-Proxy), 编写, 
+修复了些小问题, 增加用户身份验证.
 
 
-
-Overview
-===============
-
-After use Tinyproxy some time. I find I need some authentication that use usename
-and passwork, not only allow specified ips. So I write this simple proxy.
-
-And also include some useful script:
-
- * An automatic deploy script 
- * some example that using this proxy
 
 Requirements
 ==================
 
  * Python 2.6.x, or 2.7.x
 
-if you want to use the deploy script, need to install facbric.
+如果需要部署自动化部署, 需要安装fabric
 
  * pip install fabric
 
@@ -36,10 +25,10 @@ Usage
     $python proxy.py   --port [PROXY_PORT] 
 
 
-Show help message:
+帮助:
 
     $ python proxy.py -h
 
-deploy it:
+部署:
     
     $ fab deploy -u YOUR_SSH_PASSWORD -p YOUR_SSH_USERNAME

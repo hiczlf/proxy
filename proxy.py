@@ -17,6 +17,11 @@ import config
 
 
 def proxy_logger():
+    """proxy logger
+
+    如果指定了日志文件, 则讲日志输出到该文件中,
+    否则, 输出到终端中
+    """
     logger = logging.getLogger(config.PROXY_NAME)
     logger_level = getattr(logging, config.LOG_LEVEL)
     logger.setLevel(logger_level)
