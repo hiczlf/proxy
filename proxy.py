@@ -195,5 +195,5 @@ if __name__ == '__main__':
     args = parse_args()
     PORT = args.port
     server = ThreadingHTTPServer(('', PORT), AuthProxyHandler)
-    proxy_logger.info(u"HTTP代理开始工作: 监听的端口为: %s" % PORT)
+    proxy_logger.info(u"HTTP proxy strat working, the ported listend is: %s" % PORT)
     server.serve_forever()

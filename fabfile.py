@@ -24,8 +24,8 @@ def deploy():
 
 
 def _install_requirements():
-    run('sudo apt-get -y --no-upgrade install git')
-    run('sudo apt-get -y --no-upgrade install dtach')
+    # run('sudo apt-get -y  --no-upgrade install git')
+    # run('sudo apt-get -y --no-upgrade install dtach')
     with warn_only():
         run("kill `ps -ef | grep proxy.py | grep -v grep | awk '{print $2}'`")
 
