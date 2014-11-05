@@ -37,102 +37,149 @@ proxy_logger = proxy_logger()
 
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
-    __base = BaseHTTPServer.BaseHTTPRequestHandler
-    __base_handle = __base.handle
+    """
+    代理请求处理器
+    """
 
     server_version = config.PROXY_NAME + config.PROXY_VERSION
-    rbufsize = 0                        # self.rfile Be unbuffered
 
-    def _connect_to(self, netloc, soc):
-        i = netloc.find(':')
-        if i >= 0:
-            host_port = netloc[:i], int(netloc[i + 1:])
+    def _connect_to(self, netloc, server_socket):
+        self.log_request()
+        host_port = netloc.split(':')
+        if len(host_port) > 1:
+            host_port = (host_port[0], int(host_port[1]))
         else:
-            host_port = netloc, 80
+            host_port = (host_port[0], 80)
         self.log_message("connect to %s:%d" % host_port)
         try:
-            soc.connect(host_port)
-        except socket.error as arg:
-            try:
-                msg = arg[1]
-            except:
-                msg = arg
-            self.send_error(404, msg)
-            return 0
-        return 1
+            server_socket.connect(host_port)
+        except socket.error as e:
+            self.send_error(404, str(e))
+            return False
+        return True
 
     def do_CONNECT(self):
-        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        """
+        CONNECT method 处理https请求
+        参考 https://www.ietf.org/rfc/rfc2817.txt
+        """
+        if not self.basic_auth():
+            return
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            if self._connect_to(self.path, soc):
-                self.log_request(200)
+            if self._connect_to(self.path, server_socket):
                 self.wfile.write(self.protocol_version +
                                  " 200 Connection established\r\n")
                 self.wfile.write("Proxy-agent: %s\r\n" % self.version_string())
                 self.wfile.write("\r\n")
-                self._read_write(soc, 300)
+                self._read_write(server_socket, 300)
         finally:
-            soc.close()
+            server_socket.close()
             self.connection.close()
 
     def do_GET(self):
+        """处理GET请求"""
+        if not self.basic_auth():
+            return
         (scm, netloc, path, params, query, fragment) = urlparse.urlparse(
             self.path, 'http')
-        self.log_message("connect to %s" % netloc)
         if scm != 'http' or fragment or not netloc:
             self.send_error(400, "bad url %s" % self.path)
             return
-        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if not path:
-            path = '/'
+
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            if self._connect_to(netloc, soc):
-                self.log_request()
-                soc.send("%s %s %s\r\n" % (
+            if self._connect_to(netloc, server_socket):
+                request_message = "%s %s %s\r\n" % (
                     self.command,
-                    urlparse.urlunparse(('', '', path, params, query, '')),
-                    self.request_version))
+                    urlparse.urlunparse(
+                        ('', '', path or '/', params, query, '')),
+                    self.request_version)
                 self.headers['Connection'] = 'close'
                 del self.headers['Proxy-Connection']
                 for key_val in self.headers.items():
-                    soc.send("%s: %s\r\n" % key_val)
-                soc.send("\r\n")
-                self._read_write(soc)
+                    request_message += "%s: %s\r\n" % key_val
+                request_message += "\r\n"
+                server_socket.sendall(request_message)
+                self._read_write(server_socket)
         finally:
-            soc.close()
+            server_socket.close()
             self.connection.close()
 
-    def _read_write(self, soc, max_idling=100):
-        iw = [self.connection, soc]
-        ow = []
-        count = 0
-        while 1:
-            count += 1
-            (ins, _, exs) = select.select(iw, ow, iw, 3)
-            if exs:
-                break
-            if ins:
-                for i in ins:
-                    if i is soc:
-                        out = self.connection
-                    else:
-                        out = soc
-                    try:
-                        data = i.recv(8192)
-                    except SocketError:
-                        pass
-                    if data:
-                        out.send(data)
-                        count = 0
-            else:
-                pass
-            if count == max_idling:
-                break
-
-    def log_message(self, format, *args):
-        """Log an arbitrary message.
+    def _read_write(self, server_socket, max_select=300):
+        """
+        使用IO/复用将客户端发送的内容转发给所请求的服务器,
+        讲服务器端发送的请求转发给客户端
 
         """
+        client_socket = self.connection
+        except_list = read_list = [client_socket, server_socket]
+        # select 次数, 每select一次,加1
+        select_count = 0
+        while 1:
+            select_count += 1
+            try:
+                (read_ready_sockets, _, except_ready_sockets) = \
+                    select.select(read_list, [], except_list, 3)
+            except socket.error:
+                break
+
+            if except_ready_sockets:
+                break
+
+            for read_ready_socket in read_ready_sockets:
+                if read_ready_socket is server_socket:
+                    write_socket = client_socket
+                else:
+                    write_socket = server_socket
+
+                # 从读socket读取内容, 然后发送给写socket
+                try:
+                    data = read_ready_socket.recv(8192)
+                except SocketError:
+                    data = None
+                finally:
+                    # 如果出现异常,或读取内容为空(socket 对方已关闭), 则退出
+                    if not data:
+                        break
+                if data:
+                    write_socket.send(data)
+                    select_count = 0
+            # 超过了最大的select次数
+            if select_count == max_select:
+                break
+
+    def basic_auth(self):
+        """使用basic authentication验证请求"""
+        proxy_auth_header = self.headers.getheader('Proxy-Authorization')
+        if proxy_auth_header:
+            basic_auth_key_provided = proxy_auth_header.split(' ')[-1]
+        basic_auth_key = base64.b64encode(config.BASIC_AUTH_KEY)
+
+        authenticated = False
+        # 如果请求没有携带验证信息,则返回401, 提示需要提供验证信息
+        if not proxy_auth_header:
+            self.send_auth_response()
+            self.wfile.write('no auth header received')
+        elif basic_auth_key_provided == basic_auth_key:
+            authenticated = True
+        # 如果验证信息错误, 同样返回401, 并提示验证失败
+        # 在已携带验证信息, 并返回401的情况下, 根据FRC2616定义, 为验证失败
+        else:
+            self.send_auth_response()
+            self.wfile.write(self.headers.getheader('Authorization'))
+            self.wfile.write('not authenticated')
+        return authenticated
+
+    def send_auth_response(self):
+        """发送basic authentication header"""
+        self.send_response(401)
+        self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+
+    def log_message(self, format, *args):
+        """log记录指定格式message"""
 
         proxy_logger.info("%s - - [%s] %s" %
                          (self.address_string(),
@@ -145,48 +192,14 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     do_DELETE = do_GET
 
 
-class AuthProxyHandler(ProxyHandler):
-    ''' use basic authentication here
-        The authticatin header is Proxy-Authorization， not Authorization
-        The python urllib2 proxy handler also use Proxy-Authorization header.
-    '''
-
-    def do_AUTHHEAD(self):
-        self.send_response(401)
-        self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-
-    def do_GET(self):
-        self.auth_do(ProxyHandler.do_GET)
-
-    def do_CONNECT(self):
-        self.auth_do(ProxyHandler.do_CONNECT)
-
-    def auth_do(self, do):
-        ''' auth method '''
-        proxy_auth_header = self.headers.getheader('Proxy-Authorization')
-        basic_auth_key_provided = proxy_auth_header.split(' ')[-1]
-        basic_auth_key = base64.b64encode(config.BASIC_AUTH_KEY)
-        if not proxy_auth_header:
-            self.do_AUTHHEAD()
-            self.wfile.write('no auth header received')
-        elif basic_auth_key_provided == basic_auth_key:
-            do(self)
-        else:
-            self.do_AUTHHEAD()
-            self.wfile.write(self.headers.getheader('Authorization'))
-            self.wfile.write('not authenticated')
-
-
 class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
                            BaseHTTPServer.HTTPServer):
     pass
 
 def parse_args():
-    """get command line arguments"""
+    """获取命令行参数"""
     parser = OptionParser(usage="python proxy.py")
-    help = u"The port that listening on"
+    help = u"监听的端口"
     parser.add_option("--port", dest='port', type='int',
                     help=help, default=config.DEFAULT_PORT)
 
@@ -197,7 +210,6 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     PORT = args.port
-    print(PORT)
-    server = ThreadingHTTPServer(('', PORT), AuthProxyHandler)
-    proxy_logger.info(u"HTTP proxy strat working, the ported listend is: %s" % PORT)
+    server = ThreadingHTTPServer(('', PORT), ProxyHandler)
+    proxy_logger.info("代理开始运行, 监听的端口号是: %s" % PORT)
     server.serve_forever()
