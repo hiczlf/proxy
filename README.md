@@ -2,9 +2,9 @@ Proxy
 =============
 
 
-简单代理，　可以进行basic authentication验证
+简单代理，可以进行basic authentication验证
 
-如开启debug模式，　可帮助查看请求头
+如开启debug模式，可帮助查看请求头
 
 
 
@@ -14,7 +14,7 @@ Requirements
  * Python 2.6.x, or 2.7.x
 
 
-如果需要部署自动化部署, 需要安装fabric, 可能需要修改[fabfile.py](https://github.com/lifenglifeng001/proxy/blob/master/fabfile.py)
+如果需要自动化部署, 需要安装fabric, 可能需要修改[fabfile.py](https://github.com/lifenglifeng001/proxy/blob/master/fabfile.py)
 
  * pip install fabric
 
@@ -41,6 +41,8 @@ Usage
 
     $ python tests/test_visit_supplier_by_proxy.py
 
+
+作为服务:
 
 使用Upstart将代理作为系统服务， 参考[proxy.conf](https://github.com/lifenglifeng001/proxy/blob/master/proxy.conf)
 
