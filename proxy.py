@@ -225,7 +225,7 @@ def parse_args():
                     help="是否需要验证")
 
     parser.add_option("--debug", action='store_true', default=False,
-                    help="是否需要验证")
+                    help="开启调试模式")
 
     opts, args = parser.parse_args()
     return opts

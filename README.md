@@ -1,10 +1,10 @@
-PoorProxy
+Proxy
 =============
 
-基于[Tiny HTTP Proxy](https://github.com/tkmunzwa/Tiny-HTTP-Proxy), 编写, 
-修复了些小问题, 增加用户身份验证.
 
-增加了个自动化部署脚本, 和简单的测试脚本
+简单代理，　可以进行basic authentication验证
+
+如开启debug模式，　可帮助查看请求头
 
 
 
@@ -13,10 +13,10 @@ Requirements
 
  * Python 2.6.x, or 2.7.x
 
-如果需要部署自动化部署, 需要安装fabric
+
+如果需要部署自动化部署, 需要安装fabric, 可能需要修改[fabfile.py](https://github.com/lifenglifeng001/proxy/blob/master/fabfile.py)
 
  * pip install fabric
-
 
 
 
@@ -40,4 +40,7 @@ Usage
 测试(需要根据具体情况更改测试用例):
 
     $ python tests/test_visit_supplier_by_proxy.py
+
+
+使用Upstart将代理作为系统服务， 参考[proxy.conf](https://github.com/lifenglifeng001/proxy/blob/master/proxy.conf)
 
