@@ -41,6 +41,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     代理请求处理器
     """
 
+    debug = False
     server_version = config.PROXY_NAME + config.PROXY_VERSION
 
     def _connect_to(self, netloc, server_socket):
@@ -63,8 +64,6 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         CONNECT method 处理https请求
         参考 https://www.ietf.org/rfc/rfc2817.txt
         """
-        if not self.basic_auth():
-            return
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             if self._connect_to(self.path, server_socket):
@@ -79,8 +78,6 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET(self):
         """处理GET请求"""
-        if not self.basic_auth():
-            return
         (scm, netloc, path, params, query, fragment) = urlparse.urlparse(
             self.path, 'http')
         if scm != 'http' or fragment or not netloc:
@@ -90,6 +87,8 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             if self._connect_to(netloc, server_socket):
+                if self.debug:
+                    print(self.headers)
                 request_message = "%s %s %s\r\n" % (
                     self.command,
                     urlparse.urlunparse(
@@ -149,6 +148,30 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
             if select_count == max_select:
                 break
 
+    do_HEAD = do_GET
+    do_POST = do_GET
+    do_PUT = do_GET
+    do_DELETE = do_GET
+
+
+class AuthProxyHandler(ProxyHandler):
+
+    def do_CONNECT(self):
+        """
+        CONNECT method 处理https请求 增加用户验证
+        """
+        if not self.basic_auth():
+            return
+        super(AuthProxyHandler, self).do_CONNECT()
+
+    def do_GET(self):
+        """
+        GET method 增加用户验证
+        """
+        if not self.basic_auth():
+            return
+        super(AuthProxyHandler, self).do_CONNECT()
+
     def basic_auth(self):
         """使用basic authentication验证请求"""
         proxy_auth_header = self.headers.getheader('Proxy-Authorization')
@@ -186,15 +209,11 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
                           self.log_date_time_string(),
                           format % args))
 
-    do_HEAD = do_GET
-    do_POST = do_GET
-    do_PUT = do_GET
-    do_DELETE = do_GET
-
 
 class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
                            BaseHTTPServer.HTTPServer):
     pass
+
 
 def parse_args():
     """获取命令行参数"""
@@ -202,14 +221,26 @@ def parse_args():
     help = u"监听的端口"
     parser.add_option("--port", dest='port', type='int',
                     help=help, default=config.DEFAULT_PORT)
+    parser.add_option("--auth", action='store_true', default=False,
+                    help="是否需要验证")
+
+    parser.add_option("--debug", action='store_true', default=False,
+                    help="是否需要验证")
 
     opts, args = parser.parse_args()
     return opts
+
+def get_handler(auth, debug):
+    handler = AuthProxyHandler if auth else ProxyHandler
+    if debug:
+        handler.debug = True
+    return handler
 
 
 if __name__ == '__main__':
     args = parse_args()
     PORT = args.port
-    server = ThreadingHTTPServer(('', PORT), ProxyHandler)
+    handler = get_handler(args.auth, args.debug)
+    server = ThreadingHTTPServer(('', PORT), handler)
     proxy_logger.info("代理开始运行, 监听的端口号是: %s" % PORT)
     server.serve_forever()

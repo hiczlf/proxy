@@ -5,7 +5,6 @@ import unittest
 import re
 import settings
 
-unittest
 
 all = ['suite', ]
 
@@ -43,7 +42,7 @@ class ProxyVisitTestCase(ParametrizeTestCase):
         proxy = urllib2.ProxyHandler(proxy_dict)
         auth = urllib2.HTTPBasicAuthHandler()
         opener = urllib2.build_opener(proxy, auth, urllib2.HTTPHandler)
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
         urllib2.install_opener(opener)
         conn = urllib2.urlopen(url)
         content = conn.read()
@@ -53,7 +52,7 @@ class ProxyVisitTestCase(ParametrizeTestCase):
 
     def generate_proxy_dict(self, proxy):
         proxy_dict = {
-            'http': "http://" + settings.AUTH_KEY + "@" + proxy,
+            'http': "http://" + settings.AUTH_KEY + "@" + proxy + ":9999",
             'https': "https://" + settings.AUTH_KEY + "@" + proxy,
         }
         return proxy_dict
@@ -62,7 +61,7 @@ class ProxyVisitTestCase(ParametrizeTestCase):
 suite = unittest.TestSuite()
 for supplier in settings.SUPPLIER.values():
     for proxy in settings.PROXYS:
-        supplier['proxy'] = proxy
+        test_param = dict(supplier, proxy=proxy)
         suite.addTest(ParametrizeTestCase.parametrize(
-            ProxyVisitTestCase, supplier))
+            ProxyVisitTestCase, test_param))
 unittest.TextTestRunner(verbosity=2).run(suite)
