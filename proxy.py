@@ -22,9 +22,7 @@ def proxy_logger():
     如果指定了日志文件, 则讲日志输出到该文件中,
     否则, 输出到终端中
     """
-    logger = logging.getLogger(config.PROXY_NAME)
-    logger_level = getattr(logging, config.LOG_LEVEL)
-    logger.setLevel(logger_level)
+    logger = logging.getLogger(__name__)
     if config.LOG_DIR:
         log_file_path = os.path.join(config.LOG_DIR, config.LOG_FILE_NAME)
         handler = logging.FileHandler(log_file_path)
@@ -220,7 +218,7 @@ def parse_args():
     parser = OptionParser(usage="python proxy.py")
     help = u"监听的端口"
     parser.add_option("--port", dest='port', type='int',
-                    help=help, default=config.DEFAULT_PORT)
+                    help=help, default=9999)
     parser.add_option("--auth", action='store_true', default=False,
                     help="是否需要验证")
 
@@ -239,8 +237,8 @@ def get_handler(auth, debug):
 
 if __name__ == '__main__':
     args = parse_args()
-    PORT = args.port
+    port = args.port
     handler = get_handler(args.auth, args.debug)
-    server = ThreadingHTTPServer(('', PORT), handler)
-    proxy_logger.info("代理开始运行, 监听的端口号是: %s" % PORT)
+    server = ThreadingHTTPServer(('', port), handler)
+    proxy_logger.info("代理开始运行, 监听的端口号是: %s" % port)
     server.serve_forever()
