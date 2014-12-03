@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 import re
 from fabric.contrib.files import exists
-from fabric.api import env, local, run, warn_only
+from fabric.api import env, local, run, warn_only, parallel
 
 REPO_URL = 'https://github.com/lifenglifeng001/proxy.git'
 
@@ -29,7 +29,11 @@ env.hosts = [
     '173.255.218.105',
     '106.186.27.87',
 ]
+# env.hosts = [
+#     '42.96.193.216'
+# ]
 
+@parallel
 def deploy():
     proxy_folder = '/home/%s/proxy' % env.user
     _install_requirements()

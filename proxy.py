@@ -11,27 +11,27 @@ import select, socket, SocketServer, urlparse
 from socket import error as SocketError
 import base64
 import logging
-import os
 
 import config
 
+proxy_logger = logging.getLogger('proxy')
 
-def proxy_logger():
+
+def prepare_proxy_logger(logfile):
     """proxy logger
 
     如果指定了日志文件, 则讲日志输出到该文件中,
     否则, 输出到终端中
     """
-    logger = logging.getLogger(__name__)
-    if config.LOG_DIR:
-        log_file_path = os.path.join(config.LOG_DIR, config.LOG_FILE_NAME)
+    if logfile:
+        log_file_path = logfile
         handler = logging.FileHandler(log_file_path)
     else:
         handler = logging.StreamHandler()
-    logger.addHandler(handler)
-    return logger
-
-proxy_logger = proxy_logger()
+    handler.setLevel(logging.DEBUG)
+    proxy_logger.addHandler(handler)
+    proxy_logger.setLevel(logging.DEBUG)
+    return proxy_logger
 
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
@@ -160,7 +160,7 @@ class AuthProxyHandler(ProxyHandler):
         """
         if not self.basic_auth():
             return
-        super(AuthProxyHandler, self).do_CONNECT()
+        ProxyHandler.do_CONNECT(self)
 
     def do_GET(self):
         """
@@ -168,7 +168,7 @@ class AuthProxyHandler(ProxyHandler):
         """
         if not self.basic_auth():
             return
-        super(AuthProxyHandler, self).do_CONNECT()
+        ProxyHandler.do_GET(self)
 
     def basic_auth(self):
         """使用basic authentication验证请求"""
@@ -224,6 +224,8 @@ def parse_args():
 
     parser.add_option("--debug", action='store_true', default=False,
                     help="开启调试模式")
+    parser.add_option("--logfile", default=False,
+                    help="日志文件路径")
 
     opts, args = parser.parse_args()
     return opts
@@ -238,6 +240,7 @@ def get_handler(auth, debug):
 if __name__ == '__main__':
     args = parse_args()
     port = args.port
+    prepare_proxy_logger(args.logfile)
     handler = get_handler(args.auth, args.debug)
     server = ThreadingHTTPServer(('', port), handler)
     proxy_logger.info("代理开始运行, 监听的端口号是: %s" % port)

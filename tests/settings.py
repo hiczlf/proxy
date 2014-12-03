@@ -38,4 +38,7 @@ PROXYS = [
     '106.186.27.87',
 ]
 
-AUTH_KEY = "lf:lf"
+# PROXYS = ['42.96.193.216']
+PROXYS = ['192.168.0.49']
+
+AUTH_KEY = "llf:lf"
