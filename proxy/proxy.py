@@ -12,7 +12,12 @@ from socket import error as SocketError
 import base64
 import logging
 
-import config
+from cache import Cache
+
+proxy_cache = Cache()
+
+PROXY_NAME = 'poorproxy'
+PROXY_VERSION = '0.1'
 
 proxy_logger = logging.getLogger('proxy')
 
@@ -38,9 +43,10 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     """
     代理请求处理器
     """
+    debug = False
 
     debug = False
-    server_version = config.PROXY_NAME + config.PROXY_VERSION
+    server_version = PROXY_NAME + PROXY_VERSION
 
     def _connect_to(self, netloc, server_socket):
         self.log_request()
@@ -86,7 +92,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         try:
             if self._connect_to(netloc, server_socket):
                 if self.debug:
-                    print(self.headers)
+                    proxy_logger.debug(self.headers)
                 request_message = "%s %s %s\r\n" % (
                     self.command,
                     urlparse.urlunparse(
@@ -153,6 +159,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 class AuthProxyHandler(ProxyHandler):
+    auth_key = ''
 
     def do_CONNECT(self):
         """
@@ -172,18 +179,23 @@ class AuthProxyHandler(ProxyHandler):
 
     def basic_auth(self):
         """使用basic authentication验证请求"""
-        proxy_auth_header = self.headers.getheader('Proxy-Authorization')
-        if proxy_auth_header:
-            basic_auth_key_provided = proxy_auth_header.split(' ')[-1]
-        basic_auth_key = base64.b64encode(config.BASIC_AUTH_KEY)
+
+        if self._check_client():
+            return True
+
+        basic_auth_key_provided = self._get_auth_key('Proxy-Authorization') \
+            or self._get_auth_key('Authorization')
+        basic_auth_key = base64.b64encode(self.auth_key)
 
         authenticated = False
         # 如果请求没有携带验证信息,则返回401, 提示需要提供验证信息
-        if not proxy_auth_header:
+        if not basic_auth_key_provided:
             self.send_auth_response()
             self.wfile.write('no auth header received')
         elif basic_auth_key_provided == basic_auth_key:
             authenticated = True
+            proxy_cache.set(self.client_address[0], 1)
+
         # 如果验证信息错误, 同样返回401, 并提示验证失败
         # 在已携带验证信息, 并返回401的情况下, 根据FRC2616定义, 为验证失败
         else:
@@ -191,6 +203,17 @@ class AuthProxyHandler(ProxyHandler):
             self.wfile.write(self.headers.getheader('Authorization'))
             self.wfile.write('not authenticated')
         return authenticated
+
+    def _check_client(self):
+        trust_client = proxy_cache.get(self.client_address[0])
+        return trust_client
+
+    def _get_auth_key(self, auth_type):
+        auth_header = self.headers.getheader(auth_type)
+        if auth_header:
+            return auth_header.split('Basic')[-1].strip()
+        else:
+            return ''
 
     def send_auth_response(self):
         """发送basic authentication header"""
@@ -219,21 +242,28 @@ def parse_args():
     help = u"监听的端口"
     parser.add_option("--port", dest='port', type='int',
                     help=help, default=9999)
+    parser.add_option("--debug", action='store_true', default=False,
+                    help="开启调试模式")
+
+    # basic auth 相关
+    parser.add_option("--auth_key", dest='auth_key', default="lf:lf",
+                    help="basic auth 用户名和密码, 用:分开")
     parser.add_option("--auth", action='store_true', default=False,
                     help="是否需要验证")
 
-    parser.add_option("--debug", action='store_true', default=False,
-                    help="开启调试模式")
     parser.add_option("--logfile", default=False,
                     help="日志文件路径")
 
     opts, args = parser.parse_args()
     return opts
 
-def get_handler(auth, debug):
+def get_handler(auth, debug, auth_key):
+    """ 根据命令行参数,返回合适的handler"""
     handler = AuthProxyHandler if auth else ProxyHandler
-    if debug:
-        handler.debug = True
+
+    handler.debug = debug
+    handler.auth_key = auth_key
+
     return handler
 
 
@@ -241,7 +271,7 @@ if __name__ == '__main__':
     args = parse_args()
     port = args.port
     prepare_proxy_logger(args.logfile)
-    handler = get_handler(args.auth, args.debug)
+    handler = get_handler(args.auth, args.debug, args.auth_key)
     server = ThreadingHTTPServer(('', port), handler)
     proxy_logger.info("代理开始运行, 监听的端口号是: %s" % port)
     server.serve_forever()
