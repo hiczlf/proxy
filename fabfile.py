@@ -41,6 +41,13 @@ def deploy():
     _get_latest_source(proxy_folder)
     _run_proxy()
 
+@parallel
+def kill():
+    with warn_only():
+        run("kill `ps -ef | grep original_TinyHTTPProxy.py | grep -v grep | awk '{print $2}'`")
+        run("kill `ps -ef | grep  arrow_rs.py | grep -v grep | awk '{print $2}'`")
+        run("kill `ps -ef | grep  findchips.py | grep -v grep | awk '{print $2}'`")
+        run("kill `ps -ef | grep  hcr.py | grep -v grep | awk '{print $2}'`")
 
 def _install_requirements():
     distro = run('cat /etc/issue')
@@ -53,7 +60,6 @@ def _install_requirements():
         run('rpm -qa | grep -qw dtach || sudo yum install -y -q dtach')
     with warn_only():
         run("kill `ps -ef | grep proxy.py | grep -v grep | awk '{print $2}'`")
-
 
 def _create_directory_structure_if_necessary(proxy_folder):
     run('mkdir -p %s' % (proxy_folder,))
@@ -69,5 +75,5 @@ def _get_latest_source(proxy_folder):
 
 
 def _run_proxy():
-    cmd = "dtach -n `mktemp -u /tmp/proxy.XXXX` python /home/%s/proxy/proxy.py" % env.user
+    cmd = "dtach -n `mktemp -u /tmp/proxy.XXXX` python /home/%s/proxy/proxy/proxy.py --port 9999" % env.user
     run(cmd)

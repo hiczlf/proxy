@@ -12,9 +12,6 @@ from socket import error as SocketError
 import base64
 import logging
 
-from cache import Cache
-
-proxy_cache = Cache()
 
 PROXY_NAME = 'poorproxy'
 PROXY_VERSION = '0.1'
@@ -55,7 +52,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
             host_port = (host_port[0], int(host_port[1]))
         else:
             host_port = (host_port[0], 80)
-        self.log_message("connect to %s:%d" % host_port)
+        # self.log_message("connect to %s:%d" % host_port)
         try:
             server_socket.connect(host_port)
         except socket.error as e:
@@ -152,6 +149,14 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
             if select_count == max_select:
                 break
 
+    def log_message(self, format, *args):
+        """log记录指定格式message"""
+
+        proxy_logger.info("%s - - [%s] %s" %
+                         (self.address_string(),
+                          self.log_date_time_string(),
+                          format % args))
+
     do_HEAD = do_GET
     do_POST = do_GET
     do_PUT = do_GET
@@ -180,55 +185,43 @@ class AuthProxyHandler(ProxyHandler):
     def basic_auth(self):
         """使用basic authentication验证请求"""
 
-        if self._check_client():
-            return True
-
-        basic_auth_key_provided = self._get_auth_key('Proxy-Authorization') \
-            or self._get_auth_key('Authorization')
-        basic_auth_key = base64.b64encode(self.auth_key)
+        basic_auth_key_provided = self._get_auth_key('Proxy-Authorization')
 
         authenticated = False
         # 如果请求没有携带验证信息,则返回401, 提示需要提供验证信息
         if not basic_auth_key_provided:
             self.send_auth_response()
             self.wfile.write('no auth header received')
-        elif basic_auth_key_provided == basic_auth_key:
+        elif basic_auth_key_provided == self.auth_key:
             authenticated = True
-            proxy_cache.set(self.client_address[0], 1)
 
         # 如果验证信息错误, 同样返回401, 并提示验证失败
         # 在已携带验证信息, 并返回401的情况下, 根据FRC2616定义, 为验证失败
         else:
             self.send_auth_response()
-            self.wfile.write(self.headers.getheader('Authorization'))
+            self.wfile.write(self.headers.getheader('Porxy-Authorization'))
             self.wfile.write('not authenticated')
         return authenticated
 
-    def _check_client(self):
-        trust_client = proxy_cache.get(self.client_address[0])
-        return trust_client
-
     def _get_auth_key(self, auth_type):
+        """返回base64解码后的auth key, ':' 认为是没有用户名密码"""
         auth_header = self.headers.getheader(auth_type)
         if auth_header:
-            return auth_header.split('Basic')[-1].strip()
+            base64_key = auth_header.split('Basic')[-1].strip()
+            basic_auth_key_provided = base64.b64decode(base64_key)
+            if basic_auth_key_provided == ":":
+                basic_auth_key_provided = ''
         else:
-            return ''
+            basic_auth_key_provided = ''
+        return basic_auth_key_provided
 
     def send_auth_response(self):
         """发送basic authentication header"""
         self.send_response(401)
-        self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
+        # self.send_header('Proxy-Authenticate', 'Basic realm=\"Test\"')
+        self.send_header('Proxy-Authenticate', 'Basic realm=\"Test\"')
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-
-    def log_message(self, format, *args):
-        """log记录指定格式message"""
-
-        proxy_logger.info("%s - - [%s] %s" %
-                         (self.address_string(),
-                          self.log_date_time_string(),
-                          format % args))
 
 
 class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
@@ -238,7 +231,7 @@ class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
 
 def parse_args():
     """获取命令行参数"""
-    parser = OptionParser(usage="python proxy.py")
+    parser = OptionParser(usage="%prog [options] args")
     help = u"监听的端口"
     parser.add_option("--port", dest='port', type='int',
                     help=help, default=9999)
@@ -247,7 +240,7 @@ def parse_args():
 
     # basic auth 相关
     parser.add_option("--auth_key", dest='auth_key', default="lf:lf",
-                    help="basic auth 用户名和密码, 用:分开")
+                    help="basic auth key [用户名]:[密码] ")
     parser.add_option("--auth", action='store_true', default=False,
                     help="是否需要验证")
 
