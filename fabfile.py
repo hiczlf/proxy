@@ -75,5 +75,5 @@ def _get_latest_source(proxy_folder):
 
 
 def _run_proxy():
-    cmd = "dtach -n `mktemp -u /tmp/proxy.XXXX` python /home/%s/proxy/proxy/proxy.py --port 9999" % env.user
+    cmd = "dtach -n `mktemp -u /tmp/proxy.XXXX` python /home/%s/proxy/proxy.py --auth --port 9999" % env.user
     run(cmd)

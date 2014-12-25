@@ -26,7 +26,11 @@ Usage
 
 默认在项目根目录:
 
-    $python proxy.py   --port [PROXY_PORT] 
+    $python proxy.py   --port [PROXY_PORT]
+    
+    # 使用basic authentication 验证
+
+    $python proxy.py   --port [PROXY_PORT] --auth --auth_key=[NAME]:[PASSWD]
 
 
 帮助:
@@ -42,7 +46,9 @@ Usage
     $ python tests/test_visit_supplier_by_proxy.py
 
 
-作为服务:
+开机启动:
 
-使用Upstart将代理作为系统服务， 参考[proxy.conf](https://github.com/lifenglifeng001/proxy/blob/master/proxy.conf)
+使用Upstart将代理开机启动， 参考[proxy.conf](https://github.com/lifenglifeng001/proxy/blob/master/proxy.conf)
+
+Ubuntu中 将proxy.conf 放在`/etc/init/`中.
 
