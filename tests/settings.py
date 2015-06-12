@@ -2,11 +2,6 @@
 
 
 SUPPLIER = {
-    'Mouser': {
-        'url': "http://cn.mouser.com/ProductDetail/Bourns/SRN4026-101M/?qs=sGAEpiMZZMv126LJFLh8ywD646ogI6tZbpfoPxKICYc%3d",
-        'check_regex': r"<b>Mouser (?:零件编号：|Part #:)</b></td><td.*?><div.*?>(.*?)</div></td>",
-        'name': "Mouser",
-    },
     'Digikey': {
         'url': "http://www.digikey.cn/product-detail/zh/TMS320F243PGEA/296-10756-ND/381880",
         'check_regex': r"<tr><th.*>Digi-Key (?:零件编号|Part Number)</th><td.*><meta.*>(.*?)</td>",
@@ -36,10 +31,10 @@ PROXYS = [
     '50.116.47.220',
     '173.255.218.105',
     '106.186.27.87',
-    '42.96.193.216',
+    # '42.96.193.216',
 ]
 
 # PROXYS = ['42.96.193.216']
 # PROXYS = ['192.168.0.49']
 
-AUTH_KEY = "lf:lf"
+AUTH_KEY = "username:pasword"
