@@ -51,8 +51,9 @@ class ProxyVisitTestCase(ParametrizeTestCase):
         return content
 
     def generate_proxy_dict(self, proxy):
+        # settings.AUTH_KEY = 'l:l'
         proxy_dict = {
-            'http': "http://" + settings.AUTH_KEY + "@" + proxy + ":9999",
+            'http': "http://" + settings.AUTH_KEY +  "@" + proxy + ":9999",
             'https': "https://" + settings.AUTH_KEY + "@" + proxy,
         }
         return proxy_dict
