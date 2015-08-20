@@ -122,7 +122,6 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         讲服务器端发送的请求转发给客户端
 
         """
-        print(type(self.connection))
         client_socket = self.connection
         except_list = read_list = [client_socket, server_socket]
         # select 次数, 每select一次,加1
