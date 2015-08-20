@@ -81,6 +81,8 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         """处理GET请求"""
         (scm, netloc, path, params, query, fragment) = urlparse.urlparse(
             self.path, 'http')
+
+        netloc = netloc or self.headers['Host']
         if scm != 'http' or fragment or not netloc:
             self.send_error(400, "bad url %s" % self.path)
             return
@@ -95,11 +97,19 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
                     urlparse.urlunparse(
                         ('', '', path or '/', params, query, '')),
                     self.request_version)
+
                 self.headers['Connection'] = 'close'
                 del self.headers['Proxy-Connection']
                 for key_val in self.headers.items():
                     request_message += "%s: %s\r\n" % key_val
                 request_message += "\r\n"
+
+                # 处理request body里面有东西的情况，比如post请求
+                if 'Content-Length' in self.headers:
+                    length = int(self.headers['Content-Length'])
+                    payload = self.rfile.read(length)
+                    request_message += payload
+
                 server_socket.sendall(request_message)
                 self._read_write(server_socket)
         finally:
@@ -112,6 +122,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         讲服务器端发送的请求转发给客户端
 
         """
+        print(type(self.connection))
         client_socket = self.connection
         except_list = read_list = [client_socket, server_socket]
         # select 次数, 每select一次,加1
