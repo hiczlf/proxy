@@ -229,7 +229,6 @@ class AuthProxyHandler(ProxyHandler):
     def send_auth_response(self):
         """发送basic authentication header"""
         self.send_response(401)
-        # self.send_header('Proxy-Authenticate', 'Basic realm=\"Test\"')
         self.send_header('Proxy-Authenticate', 'Basic realm=\"Test\"')
         self.send_header('Content-type', 'text/html')
         self.end_headers()
